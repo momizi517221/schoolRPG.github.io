@@ -319,27 +319,6 @@ function saveMenu( g ){
 	 g.fillText( "⇒",44,170 + ( 50 * saveCursor ) )
 }
 
-function start( g ){
-    g.fillStyle = "rgba( 0, 0, 0, 1 )";
-    g.fillRect( 0, 0, WIDTH + 300, HEIGHT + 300 );
-	 
-	 btnUp.style.display = "none";
-	 btnDown.style.display = "none";
-	 btnRight.style.display = "none";
-	 btnLeft.style.display = "none";
-	 btnMenu.style.display = "none";
-	 btnItem.style.display = "none";
-	 btnJUDE.style.display = "none";
-	 
-	 g.font = "32px monospace"
-	 g.fillStyle = "rgba(255,255,255,1)"
-	 g.fillText("クロームブックでタッチして操作できます。",32,50)
-	 g.fillText("乱暴に扱わないでください。",32,90)
-	 g.fillText("ゲームはスタートボタンを押せばスタートします。",32,130)
-	 
-	 
-	 
-}
 
 
 
@@ -420,12 +399,14 @@ function beginning( g ){
 	}   
 }
 
+//selection
 
 function DrawTitle( g )
 {
-   //背景
+	
+ 
    g.fillStyle = "rgba( 0, 120, 50, 1 )";
-   g.fillRect( 0, 0, WIDTH, 700 );
+   g.fillRect( 0, 0, WIDTH, HEIGHT );
 	
 	let choseA = 0;
 	let choseB = 0;
@@ -440,7 +421,6 @@ function DrawTitle( g )
 	if( selection == 3 ){
 	   choseC = 10;
 	}
-
 	
 	let titlePositionX = 450;
 	
@@ -455,14 +435,14 @@ function DrawTitle( g )
 	g.fillRect( titlePositionX + choseC, 400 + choseC, 250, 60 );	
 	
 	g.fillStyle = "rgba( 0, 0, 0, 0.45)";
-	g.fillRect( titlePositionX - 20, 85, 310, 80 );
+	g.fillRect( titlePositionX - 50, 85, 370, 80 );
 	
 	g.fillStyle = "rgba( 215, 215, 255, 1)";
-	g.fillRect( titlePositionX - 30, 75, 310, 80 );
+	g.fillRect( titlePositionX - 60, 75, 370, 80 );
 		
 	g.font = "50px monospace";
 	g.fillStyle = "black";
-	g.fillText( "学校脱出RPG",titlePositionX - 20, 130);	
+	g.fillText( "料理運ぶゲーム",titlePositionX - 50, 130);	
 	
 	g.font = "40px monospace";
 	g.fillStyle = "rgba(0,0,0,1)";
@@ -470,7 +450,7 @@ function DrawTitle( g )
 	g.fillText( "スタート",titlePositionX + 40, 265);
 	g.fillText( "操作説明",titlePositionX + 40, 355);
 	g.fillText( "遊び方",  titlePositionX + 65, 445);
-
+	
 }
 
 function Operation( g )
@@ -478,14 +458,28 @@ function Operation( g )
    g.fillStyle = "rgba( 0, 0, 0, 1 )";
    g.fillRect( 0, 0, WIDTH, HEIGHT );
 	
-   g.drawImage( gImg0pe, 0,0,1175,HEIGHT )
+	g.fillStyle = "white"
+	g.font = "32px monospase"
+   g.fillText("wasd",32,64)
+	g.fillText("i",64,128 + 20 )
+	g.fillText("m",57,192 + 40 )
+	g.fillText("escape",32,256 + 60 )
+	
+	g.fillText("移動／カーソルを動かす",256,64)
+	g.fillText("インベントリを開く",256,128 + 20 )
+	g.fillText("メニューを開く",256,192 + 40 )
+	g.fillText("タイトルに戻る",256,256 + 60 )
+  
 }
 
 function asobi( g ){
    g.fillStyle = "rgba( 0, 0, 0, 1 )";
    g.fillRect( 0, 0, WIDTH, HEIGHT );
 	
-   g.drawImage( gImgaso, 0,0,1175,HEIGHT )
+	g.fillStyle = "white"
+	g.font = "32px monospase"
+   g.fillText("教室内を散策しアイテムを集めて脱出しよう",32,64)
+	g.fillText("エンドタイプは３つ頑張ってトゥルーエンドを目指そう",32,128 + 20 )
 }
 
 
@@ -536,8 +530,10 @@ function DrawMap( g )
 	   g.fillRect( 0, 0, 1200, 820 )
 	}
 					 
-   g.font = "50px monospace";
+   g.font = "20px monospace";
 	g.fillStyle = FONTSTYLE;
+	
+	g.fillText("画面をフルスクリーンにしてください",0,32)
   
 }
 
@@ -975,7 +971,10 @@ window.onkeydown = function( ev )
 	      saveScreen();
 	   }
    }
-		
+	
+	if( c == 27 ){
+	location.reload();
+	}
 
 	
 }
