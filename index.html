@@ -1,0 +1,2722 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+</head>
+<body style="margin:0px;overflow:hidden">
+
+<canvas id="main"></canvas>
+
+<style>
+  body {
+	   margin:0px;
+		overflow:hidden;
+	}
+	
+	canvas {
+	   position: relative;
+		z-index: 1;
+	}
+	
+	
+</style>
+
+<script>
+const TILESIZE       = 32;                     //ドットサイズタイル
+const TILECOLUMN     = 8;                      //マップチップ桁数
+const TILEROW        = 8;                      //マップチップ行数
+const MAP_WIDTH      = 48;                     //マップ幅
+const MAP_HEIGHT     = 65;                     //マップ高さ
+const CHRHEIGHT      = 32;                     //キャラの高さ
+const CHRWIDTH       = 32;                     //キャラの幅
+const SCR_HEIGHT     = 48;                     //キャラを中心としてマップ表示高さ
+const SCR_WIDTH      = 48;                     //キャラを中心としたマップ表示幅
+
+let gHeight          = 24 * TILESIZE;      //実画面の高さ
+let gWidth           = 47 * TILESIZE + 22;     //実画面の幅
+const HEIGHT         = 21 * TILESIZE;          //仮想画面、高さ
+const WIDTH          = 41 * TILESIZE;          //仮想画面、幅
+
+const SCROLL         = 4;                      //スクロール速度
+const INTERVAL       = 33;                     //フレーム呼び出す間隔
+let START_X        = 13;                     //スタート位置ｘ
+let START_Y         =8;
+
+const WNDSTYLE       =  "rgba( 0, 0, 0, 0.55 )"//ウィンドウの色
+const FONTSTYLE      = "white"                 //文字色
+const FONT           = "32px monospace"        //フォント設定
+
+const gKey           = new Uint8Array( 0x100 );//キー入力バッファ
+let gAngle           = 3;                      //プレイヤーの向き
+let gScreen;                                   //仮想画面
+let gFrame           = 0;                      //内部カウンタ
+let gMessage1        = null;                   //表示メッセージ1
+let gMessage2        = null;                   //表示メッセージ2
+let gMoveX           = 0;                      //移動量X
+let gMoveY           = 0;                      //移動量Y
+let gPhase           = 0;                      //フェーズ処理
+let gPlayerX         = START_X * TILESIZE;     //プレイヤー座標ｘ
+let gPlayerY         = START_Y * TILESIZE;     //プレイヤー座標ｙ
+
+let gImgMap;                                  //画像、マップ
+let gImgPlayer;                               //画像、プレイヤー
+let gImgItem;
+let gImgKam;
+let gImgsako;
+let gImgsakot;
+
+let selection = 0;
+
+
+let pryOpen = 0; //扉をジャッキで開けたか
+let clack = 0; //窓が割れたか
+
+let menu = true;       //メニューを表示するかしないか
+let itemCursor = 0;    //メニューのどのアイテムを選択しているか
+let choice = true;;    //メニュー選択肢を表示するかしないか
+let choiceCursor = 0;  //メニュー選択肢のどこを選択しているか
+let escape = true; //扉から脱出するウィンドウを表示するか
+let escapeCursor = 0;
+let saveCursor = 0;
+let saveloadCursor = 0;
+
+let nextWord = -1;     //冒頭の言葉の語群
+
+let second = 0;        //メニューイベントを開いただけで実行させないようにする
+
+let moveStop = 0;      //すべてをストップ
+let menuLock = true;   //メニューを開いてる間移動と方向を制限
+let angleLock = true;  //アングルをロック
+let activeLock= true;  //イベント中の動き制限
+
+
+let combi = 0;         //グルーガンを使うときに２つアイテムを選択するためにアイテム選択と切り替える
+let combiDone = 0;     //組み合わせる２つのアイテムの設定
+let itemCursor_combi = 0;    //メニューのどのアイテムを選択しているか
+let ja = [];   //くっつけるために選んだアイテムをいれる
+let two = 0;   //くっつけるために２回できるようにする
+
+let diamond  = 0;
+let cord     = 0;
+let umbrella = 0;
+let fabric   = 0;
+let jack     = 0;
+let cup      = 0;
+let gun      = 0;
+let clock    = 0;
+let battery  = 0;
+let broom    = 0;
+let bakingSoda = 0;
+
+let umbrella_repaired = 0;
+let diamond_code = 0;
+let gun_on = 0;
+let cap_water = 0;
+let jack_beautiful = 0;
+let cap_baikingWater = 0;
+
+let diamondGet  = 0;
+let cordGet     = 0;
+let umbrellaGet = 0;
+let fabricGet   = 0;
+let jackGet     = 0;
+let cupGet      = 0;
+let gunGet      = 0;
+let clockGet    = 0;
+let batteryGet  = 0;
+let broomGet    = 0;
+let bakingSodaGet  = 0 ;
+
+let umbrella_repairedGet = 0;
+let diamond_codeGet = 0;
+let gun_onGet = 0;
+let cap_waterGet = 0;
+let jack_beautifulGet = 0;
+let cap_baikingWaterGet = 0;
+
+
+
+let gAngleSako = 3
+let sakoX = 0
+let sakoY = 0
+let sakoMoveX = 0;
+let sakoMoveY = 0;
+let sako = 0;
+let sakoT = 0;
+
+let kam = 0;
+let backKam = 0;
+
+
+let cond = 0
+
+let duringEvent = false//イベント中
+
+
+const gMap = [
+ 0, 0, 0, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+ 0, 0, 0, 7, 4,16,45,46,46,46,46,46,46,47,46,47, 4, 7, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+ 0, 0, 0, 7, 4, 4,53,54,54,54,54,54,54,55,54,55, 4, 7, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+ 0, 0, 0, 7, 3, 3,61,62,62,62,62,62,62,63,62,63, 3, 7, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+ 0, 0, 0, 7, 5, 6, 1, 1, 1, 1, 1, 1, 1, 1,12,13, 1, 7, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+ 0, 0, 0, 7, 5, 6, 1, 1, 1, 1, 8, 9, 1, 1, 1, 1, 1, 7, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+ 0, 0, 0, 7, 5, 6, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 7, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+ 0, 0, 0, 7, 5, 6, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 7, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+ 0, 0, 0, 7, 5, 6, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 7, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+ 0, 0, 0, 7, 5, 6, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 7, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+ 0, 0, 0, 7, 5, 6, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 7, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+ 0, 0, 0, 7, 5, 6, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 7, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+ 0, 0, 0, 7, 5, 6, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 7, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+ 0, 0, 0, 7, 5, 6, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 7, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+ 0, 0, 0, 7, 5, 6, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 7, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+ 0, 0, 0, 7, 5, 6, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 7, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+ 0, 0, 0, 7, 5, 6, 2, 1, 2, 1, 2, 1, 2, 1, 1, 1, 1, 7, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+ 0, 0, 0, 7, 5, 6, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 7, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+ 0, 0, 0, 7, 5, 6, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 7, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+ 0, 0, 0, 7, 5, 6, 17,10,10,10,10,10,10,10,10,11,1, 7, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 7, 7, 7, 7, 7, 7, 0, 0,
+ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 7, 4, 4, 4, 4, 7, 0, 0,
+ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 7, 4, 4, 4, 4, 7, 0, 0,
+ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 7 ,4, 4, 4, 4, 7, 0, 0,
+ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 7,19,18,18,19, 7, 0, 0,
+ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 7,19,18,18,19, 7, 0, 0,
+ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 7,19,18,18,19, 7, 0, 0,
+ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 7,19,18,18,19, 7, 0, 0,
+ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 7,20,18,18,19, 7, 0, 0,
+ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 7,21,18,18,19, 7, 0, 0,
+ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 7,19,18,18,19, 7, 0, 0,
+ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 7,19,18,18,19, 7, 0, 0,
+ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 7,19,18,18,19, 7, 0, 0,
+ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 7,19,18,18,19, 7, 0, 0,
+ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 7,19,18,18,19, 7, 0, 0,
+ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 7,19,18,18,19, 7, 0, 0,
+ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 7,19,18,18,19, 7, 0, 0,
+ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 7,19,18,18,19, 7, 0, 0,
+ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 7,19,18,18,19, 7, 0, 0,
+ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 7,19,18,18,19, 7, 0, 0,
+ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 7,19,18,18,19, 7, 0, 0,
+ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 7,19,18,18,19, 7, 0, 0,
+ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 7,19,18,18,19, 7, 0, 0,
+ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 7,19,18,18,19, 7, 0, 0,
+ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 7,19,18,18,19, 7, 0, 0,
+ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 7,19,18,18,19, 7, 0, 0,
+ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 7, 7, 7, 7, 7, 7, 0, 0,
+ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+]
+
+//場面切り替え
+function DrawMain()
+{
+   const g  = gScreen.getContext("2d");      //仮想画面を取得
+	
+	if( gPhase == 0 ){
+	   DrawTitle( g );
+	}
+	if( gPhase == 0.1 ){
+	   Operation( g )
+	}
+	
+	if( gPhase == 0.2 ){
+	   asobi( g )
+	}
+	
+	if( gPhase == 0.5 ){
+	   moveStop = 1;
+		duringEvent = true;
+	   beginning( g );
+	}
+	
+	if( gPhase == 1 ){
+	   DrawMap( g );  //マップ描画
+		menuScreen( g )
+	}	
+	
+	if( gPhase == 5 ){
+	   end_n( g )
+	}
+	if( gPhase == 6 ){
+	   end_t( g )
+	}
+	if( gPhase == 7 ){
+	   end_b( g )
+	}
+	
+	
+	if( gPhase == 9 ){
+	   saveMenu( g )
+	}
+	
+	if( gPhase == 10 ){
+	   saveload( g )
+	}
+	
+	
+	DrawMessage( g );
+}
+
+function end_n( g ){
+    SetMessage( null,null)
+    g.fillStyle = "rgba( 0, 200, 0, 1 )";
+    g.fillRect( 0, 0, WIDTH + 300, HEIGHT + 300 );
+	 
+	 g.font = FONT;
+	g.fillStyle = "black";
+	 g.fillText( "ノーマルエンド",200,200)
+}
+
+function end_t( g ){
+    SetMessage( null,null)
+    g.fillStyle = "rgba( 0, 200, 0, 1 )";
+    g.fillRect( 0, 0, WIDTH + 300, HEIGHT + 300 );
+	 
+	 g.font = FONT;
+	g.fillStyle = "black";
+	 g.fillText( "トゥルーエンド",200,200)
+}
+function end_b( g ){
+    SetMessage( null,null)
+    g.fillStyle = "rgba( 0, 200, 0, 1 )";
+    g.fillRect( 0, 0, WIDTH + 300, HEIGHT + 300 );
+	 
+	 g.font = FONT;
+	g.fillStyle = "black";
+	 g.fillText( "バットエンド",200,200)
+}
+
+function saveMenu( g ){
+
+    g.fillStyle = "rgba( 0, 120, 50, 1 )";
+    g.fillRect( 0, 0, WIDTH + 300, HEIGHT + 300 );
+	 
+	 g.font = FONT;
+	 g.fillStyle = "black";
+	 g.fillText( "メニュー",32,60)
+    g.fillText( "セーブ＆ロード",96,170)
+	 g.fillText( "ゲームに戻る",96,220)
+	 g.fillText( "タイトルに戻る",96,270)
+	 g.fillText( "リセット",96,320)
+	 
+	 g.fillStyle = "white";
+	 g.fillText( "⇒",44,170 + ( 50 * saveCursor ) )
+}
+
+function start( g ){
+    g.fillStyle = "rgba( 0, 0, 0, 1 )";
+    g.fillRect( 0, 0, WIDTH + 300, HEIGHT + 300 );
+	 
+	 btnUp.style.display = "none";
+	 btnDown.style.display = "none";
+	 btnRight.style.display = "none";
+	 btnLeft.style.display = "none";
+	 btnMenu.style.display = "none";
+	 btnItem.style.display = "none";
+	 btnJUDE.style.display = "none";
+	 
+	 g.font = "32px monospace"
+	 g.fillStyle = "rgba(255,255,255,1)"
+	 g.fillText("クロームブックでタッチして操作できます。",32,50)
+	 g.fillText("乱暴に扱わないでください。",32,90)
+	 g.fillText("ゲームはスタートボタンを押せばスタートします。",32,130)
+	 
+	 
+	 
+}
+
+
+
+function saveload( g ){
+    g.fillStyle = "rgba( 0, 120, 50, 1 )";
+    g.fillRect( 0, 0, WIDTH + 300, HEIGHT + 300 );
+	 
+	 g.font = FONT;
+	 g.fillStyle = "black";
+	 g.fillText( "セーブ＆ロード",32,60)
+    g.fillText( "セーブ１",96,170)
+	 g.fillText( "セーブ２",96,220)
+	 g.fillText( "セーブ３",96,270)
+	 g.fillText( "ロード１",96,370)
+	 g.fillText( "ロード２",96,420)
+	 g.fillText( "ロード３",96,470)
+	 g.fillText( "戻る",96,520)
+	 
+	 g.fillStyle = "white";
+	 g.fillText( "⇒",44,170 + ( 50 * saveloadCursor ) )
+	 
+}
+
+function beginning( g ){
+
+   g.fillStyle = "rgba( 0, 0, 0, 1 )";
+   g.fillRect( 0, 0, WIDTH + 300, HEIGHT + 300 );
+	
+	let groupWords = [
+	"...ん",
+	"寝てしまっていたか...",
+	"そろそろ帰らなきゃな..."
+	]
+	
+	SetMessage(groupWords[nextWord],null)
+	
+	if(nextWord >= 3){
+	
+	   gPhase = 1;
+		
+		for( let i = 0; i < 10; i++ ){
+		
+		   if( i < 2 ){
+            setTimeout( function(){ gMoveY -= 32; }, 1000 );
+		   }
+			
+			if( i == 2 ){
+			   setTimeout(function(){ gAngle = 2; }, 2000 );
+			}
+			
+			if( i == 3 || i == 4 || i == 5 ){
+            setTimeout( function(){ gMoveX += 32; }, 3000 );
+		   }
+			
+			if( i == 6 ){
+			   setTimeout( function(){ SetMessage( "あれ...開かない？", null ) }, 5000 );
+			}
+			
+			if( i == 7 ){
+			   setTimeout( function(){ SetMessage( "外に出る方法はなにかないかな？", null ) }, 7000 );
+			}
+			
+			if( i <= 8 ){
+			   setTimeout(function(){gMessage1 = null;
+				activeLock = true;
+				menuLock = true;
+				angleLock = true;
+			   moveStop = 0;
+					}, 8000);
+			}
+			
+			if( i == 9 ){
+			   setTimeout(function(){ bgm(); duringEvent = false;}, 8500);
+		   }
+
+			
+	   }
+	}   
+}
+
+
+function DrawTitle( g )
+{
+   //背景
+   g.fillStyle = "rgba( 0, 120, 50, 1 )";
+   g.fillRect( 0, 0, WIDTH, 700 );
+	
+	let choseA = 0;
+	let choseB = 0;
+	let choseC = 0;
+	
+	if( selection == 1 ){
+	   choseA = 10;
+	}
+	if( selection == 2 ){
+	   choseB = 10;
+	}
+	if( selection == 3 ){
+	   choseC = 10;
+	}
+
+	
+	let titlePositionX = 450;
+	
+	g.fillStyle = "rgba( 0, 0, 0, 0.45)";
+	g.fillRect( titlePositionX + 10, 230, 250, 60 );
+	g.fillRect( titlePositionX + 10, 320, 250, 60 );
+	g.fillRect( titlePositionX + 10, 410, 250, 60 );
+	
+	g.fillStyle = "rgba( 215, 215, 255, 1)";
+	g.fillRect( titlePositionX + choseA, 220 + choseA, 250, 60 );
+	g.fillRect( titlePositionX + choseB, 310 + choseB, 250, 60 );
+	g.fillRect( titlePositionX + choseC, 400 + choseC, 250, 60 );	
+	
+	g.fillStyle = "rgba( 0, 0, 0, 0.45)";
+	g.fillRect( titlePositionX - 20, 85, 310, 80 );
+	
+	g.fillStyle = "rgba( 215, 215, 255, 1)";
+	g.fillRect( titlePositionX - 30, 75, 310, 80 );
+		
+	g.font = "50px monospace";
+	g.fillStyle = "black";
+	g.fillText( "学校脱出RPG",titlePositionX - 20, 130);	
+	
+	g.font = "40px monospace";
+	g.fillStyle = "rgba(0,0,0,1)";
+	
+	g.fillText( "スタート",titlePositionX + 40, 265);
+	g.fillText( "操作説明",titlePositionX + 40, 355);
+	g.fillText( "遊び方",  titlePositionX + 65, 445);
+
+}
+
+function Operation( g )
+{
+   g.fillStyle = "rgba( 0, 0, 0, 1 )";
+   g.fillRect( 0, 0, WIDTH, HEIGHT );
+	
+   g.drawImage( gImg0pe, 0,0,1175,HEIGHT )
+}
+
+function asobi( g ){
+   g.fillStyle = "rgba( 0, 0, 0, 1 )";
+   g.fillRect( 0, 0, WIDTH, HEIGHT );
+	
+   g.drawImage( gImgaso, 0,0,1175,HEIGHT )
+}
+
+
+
+//プレイヤー描画とマップ調整
+function DrawMap( g )
+{
+   let mx = Math.floor( gPlayerX / TILESIZE );                //プレイヤーのタイル座標ｘ
+	let my = Math.floor( gPlayerY / TILESIZE );                //プレイヤーのタイル座標ｙ
+	
+	for( let dy = -SCR_HEIGHT; dy <= SCR_HEIGHT; dy++ ){
+		let ty = my + dy;                                       //タイル座標ｙ
+		let py = ( ty + MAP_HEIGHT ) % MAP_HEIGHT;              //ループ後タイル座標ｙ
+	   for( let dx = -SCR_WIDTH; dx <= SCR_WIDTH; dx++ ){
+		let tx = mx + dx;                                       //タイル座標ｘ
+		let px = ( tx + MAP_WIDTH ) % MAP_WIDTH;               //ループ後タイル座標ｘ
+		   DrawTile( g,
+			          tx * TILESIZE + WIDTH / 2 - gPlayerX - 16,
+						 ty * TILESIZE + HEIGHT / 2 - gPlayerY - 16,
+						 gMap[ py * MAP_WIDTH + px ] );				 
+		}
+		
+	}
+	
+	let TweakX = 4;  //プレイヤーの位置描画微調整ｘ
+	
+	//プレイヤー描画(足踏みとアングルの設定もある)
+	g.drawImage( gImgPlayer,
+	             CHRWIDTH * ( gFrame >> 3 & 1 ), gAngle * CHRHEIGHT, CHRWIDTH, CHRHEIGHT, 
+					 WIDTH / 2 - CHRWIDTH / 2 + TweakX, HEIGHT / 2 - CHRHEIGHT + TILESIZE / 2, CHRWIDTH, CHRHEIGHT );
+					 
+	if( sako == 1 ){
+   g.drawImage( gImgsako,
+	             CHRWIDTH * ( gFrame >> 3 & 1 ), gAngleSako * CHRHEIGHT, CHRWIDTH, CHRHEIGHT, 
+					 sakoX, sakoY, CHRWIDTH, CHRHEIGHT );
+			}		 
+			
+	if( sakoT == 1 ){
+	   	g.drawImage( gImgsakot,700,250,380,280)
+	}
+	
+	if( kam == 1 ){
+	   g.drawImage( gImgKam,0,0,1200,720)
+	}
+	
+	if( backKam == 1 ){
+	   g.fillStyle = "black"
+	   g.fillRect( 0, 0, 1200, 820 )
+	}
+					 
+   g.font = "50px monospace";
+	g.fillStyle = FONTSTYLE;
+  
+}
+
+//マップ描画
+function DrawTile( g, x, y, idex )
+{
+   const ix = ( idex % TILECOLUMN ) * TILESIZE;
+	const iy = Math.floor( idex / TILECOLUMN ) * TILESIZE;
+   g.drawImage( gImgMap, ix, iy, TILESIZE, TILESIZE, x, y, TILESIZE, TILESIZE );
+}
+
+//画像オブジェクト作成
+function LoadImage()
+{
+   gImgMap    = new Image(); gImgMap.src      = "mapSchool.png"
+	gImgPlayer = new Image(); gImgPlayer.src   = "player.png"
+	gImgsako   = new Image(); gImgsako.src     = "さこ.png"
+	gImgsakot  = new Image(); gImgsakot.src    = "さこ立ち絵.png"
+	
+	gImgItem2  = new Image(); gImgItem2.src    = "itemSchool.png"
+	gImgItem3  = new Image(); gImgItem3.src    = "itemSchool_w.png"
+	
+	gImg0pe    = new Image(); gImg0pe.src      = "説明.png"
+	gImgaso    = new Image(); gImgaso.src      = "遊びかた.png"
+	gImgKam    = new Image(); gImgKam.src      = "風景.png"
+	
+}
+
+
+//画面サイズ自動変更処理
+function WmSize()
+{
+   const ca = document.getElementById( "main" );	
+	const g  = ca.getContext( "2d" );                         //実画面を取得
+	g.imageSmoothingEnab = g.msImageSmoothingEnabled = 0;   //補完処理
+	
+   //自動サイズ調整
+	ca.width =  window.innerWidth;                          //キャンバスの幅をブラウザの幅へ変更
+	ca.height = window.innerHeight;                         //キャンバスの高さをブラウザの高さに変更
+	
+}
+
+//画面サイズ調整
+function WmPaint()
+{
+   DrawMain();
+	
+	const ca = document.getElementById("main");  //キャンバスを取得
+   const g  = ca.getContext( "2d" );              //実画面を取得
+	
+	//仮想画面を表示
+   g.drawImage( gScreen, 0, 0, gScreen.width, gScreen.height, 0, 0, gWidth, gHeight );
+
+}
+
+
+//メッセージ描画
+function DrawMessage( g )
+{
+
+   if( !gMessage1 ){  //メッセージ内容がない場合
+	   return;
+	}
+	
+   g.fillStyle = "rgba( 255,255,255,0.4)";  //ウィンドウの色
+	g.fillRect( 200, 550, 700, 110 );
+	
+	g.font = FONT;
+	g.fillStyle = "black";
+	
+	g.fillText( gMessage1, 220, 590 );
+	if( gMessage2 ){
+	g.fillText( gMessage2, 220, 635 );
+	}
+	
+}
+
+function SetMessage( v1, v2 )
+{
+   gMessage1 = v1;
+	gMessage2 = v2;
+}
+
+let canPress = true;
+
+//フィールド進行処理
+function TickField()
+{
+
+   if( gMoveX != 0 || gMoveY != 0 || gMessage1 == 1 || gPhase == 0 || gPhase == 0.5 ){}            //移動中の場合
+   else if( gKey[ 65 ] ){  //左
+	           if( angleLock == true ){
+	           gAngle = 1;
+				  }
+				  if( activeLock == true ){
+			     gMoveX = -TILESIZE; 
+				  }
+		  }
+	else if( gKey[ 87 ] ){  //上
+	           if( angleLock == true ){
+	           gAngle = 3;
+				  }
+				  if( activeLock == true ){
+			     gMoveY = -TILESIZE; 
+				  }
+		  }
+	else if( gKey[ 68 ] ){  //右
+	           if( angleLock == true ){
+	           gAngle = 2;
+				  }
+				  if( activeLock == true ){
+			     gMoveX =  TILESIZE; 
+				  }
+		  }
+	else if( gKey[ 83 ] ){  //下
+	           if( angleLock == true ){
+	           gAngle = 0;
+				  }
+				  if( activeLock == true ){
+			     gMoveY =  TILESIZE;
+				  }
+		     }
+	
+	let mx = Math.floor( ( gPlayerX + gMoveX ) / TILESIZE );   //移動後のタイル座標X
+	let my = Math.floor( ( gPlayerY + gMoveY ) / TILESIZE );   //移動後のタイル座標
+	
+	//マップループ処理
+	mx += MAP_WIDTH;
+	mx %= MAP_WIDTH;
+	my += MAP_HEIGHT;
+	my %= MAP_HEIGHT;
+	let m = gMap[ my * MAP_WIDTH + mx ];  //タイル番号
+	
+	if( m != 1 && m != 6 && m != 18 && m != 19 && m !=22 || menu == false ){
+	   gMoveX = 0;
+		gMoveY = 0;
+	}
+	
+	if( Math.abs( gMoveX ) + Math.abs( gMoveY ) == SCROLL ){  //タイルに乗った後に表示
+	   if( m == 2 ){
+	      //SetMessage( "魔王を倒して", null );
+	   }
+	}
+	
+	gPlayerX += Math.sign( gMoveX ) * SCROLL;
+	gPlayerY += Math.sign( gMoveY ) * SCROLL;
+	gMoveX   -= Math.sign( gMoveX ) * SCROLL;
+	gMoveY   -= Math.sign( gMoveY ) * SCROLL;
+	
+	sakoX     += Math.sign( sakoMoveX ) * SCROLL;
+	sakoY     += Math.sign( sakoMoveY ) * SCROLL;
+	sakoMoveX -= Math.sign( sakoMoveX ) * SCROLL;
+	sakoMoveY -= Math.sign( sakoMoveY ) * SCROLL;
+	
+	
+	gPlayerX += ( MAP_WIDTH  * TILESIZE );
+	gPlayerX %= ( MAP_WIDTH  * TILESIZE );
+	gPlayerY += ( MAP_HEIGHT * TILESIZE );
+	gPlayerY %= ( MAP_HEIGHT * TILESIZE );
+}
+
+let saveone = 0;
+
+//キー入力DOWNイベント
+window.onkeydown = function( ev )
+{
+   let c = ev.keyCode;       //キーコード取得
+	const g  = gScreen.getContext("2d");
+
+	if( gKey[ c ] != 0 ){     //すでに押下中の場合（キーリピート）
+	   return;
+	}
+	
+	gKey[ c ] = 1;
+	
+	gMessage1 = null;
+	
+   
+	if( c == 87 ){
+		
+      if( gPhase == 0 ){
+		
+	      selection--;
+			
+	      if( selection <= 0 ){
+	         selection = 1;
+	      }
+		}
+		
+		if( gPhase == 1 ){
+			
+			if( angleLock == false ){
+				
+			   if( choice == true ){
+			      itemCursor--;
+		      }
+			
+			   if( combi == 1 ){
+			      itemCursor_combi--;
+			   }
+			
+			   if( escape == false ){
+			      escapeCursor--;
+			   }
+			
+			   if( choice == false ){
+				
+		         if(choiceCursor == 0){
+				      choiceCursor =1;
+				   }
+					
+			      choiceCursor--;
+			   }
+			}
+	   }	
+		
+		if( gPhase == 9 ){
+		
+		   saveCursor--;
+			
+	      if( saveCursor < 0 ){
+			   saveCursor = 0;
+			}
+		}
+		
+		if( gPhase == 10 ){
+		
+		   saveloadCursor--;
+			
+	      if( saveloadCursor < 0 ){
+			   saveloadCursor = 0;
+			}
+		}
+		
+   }
+		
+		
+   if( c == 83 ){
+		
+      if( gPhase == 0 ){
+			
+		   selection++;
+			
+		   if( selection >= 4 ){
+			   selection = 3;
+			}
+		}
+			
+		if( gPhase == 1 ){
+			
+		   if( angleLock == false ){
+			
+			   if( choice == true ){
+		         itemCursor++;
+		      }
+			
+			   if( combi == 1 ){
+			      itemCursor_combi++;
+			   }
+			
+			   if( escape == false ){
+			      escapeCursor++;
+			   }
+			
+		      if( choice == false ){
+			
+				   if(choiceCursor == 2){
+				      choiceCursor = 1;
+				   }
+				
+			      choiceCursor++;
+			
+			   }
+			}		
+      }
+		
+		if( gPhase == 9 ){
+		
+		   saveCursor++;
+			
+			if( saveCursor > 3 ){
+			   saveCursor = 3;
+			}
+		}
+		
+		if( gPhase == 10 ){
+		   saveloadCursor++;
+			if( saveloadCursor > 7 ){
+			   saveloadCursor = 7;
+			}
+			
+		}
+		
+	}
+	
+	
+	
+	
+	if ( c == 13 ) {
+	   if(gPhase == 0 ){
+		
+         if( selection == 1 ){
+	         gPhase = 0.5;
+         }
+			
+         if( selection == 2 ){
+		   	gPhase = 0.1
+				btnTitle.style.display = "block";
+		   }
+			
+			if( selection == 3 ){
+		   	gPhase = 0.2
+				btnTitle.style.display = "block";
+		   }
+			
+		}
+		
+		if(gPhase == 0.5){
+		   nextWord++;
+		}
+		
+		if( gPhase == 1 && duringEvent == false ){
+		   judg();
+		   systemScreen();
+		}
+		
+		if( gPhase == 9 ){
+		   
+	      if( saveCursor == 0 ){
+			   gPhase = 10;
+			}
+			if( saveCursor == 1 ){
+			   gPhase = 1;
+				angleLock = true;
+		   	activeLock = true;
+		   	menuLock = true;
+			}
+			if( saveCursor == 2 ){
+			   location.reload();
+			}
+			if( saveCursor == 3 ){
+			   reset();
+				SetMessage("データをリセットしました",null)
+			}
+	
+		}
+
+		if( gPhase == 10 ){
+		   if( gPhase == 1 || gPhase == 10){
+		   if( saveone == 1 ){
+		   if(saveloadCursor == 0 ){
+			   save1();
+				SetMessage("セーブ1にセーブしました")
+			}
+			}
+			if( saveone == 0 ){
+			   saveone = 1;
+			}
+			
+			if(saveloadCursor == 1 ){
+			   save2();
+				SetMessage("セーブ2にセーブしました")
+			}
+			if(saveloadCursor == 2 ){
+			   save3();
+				SetMessage("セーブ3にセーブしました")
+			}
+			}
+			
+			if(saveloadCursor == 4 ){
+			   load1();
+				SetMessage("ロード1をロードしました")
+				gPhase = 1;
+				angleLock = true;
+		   	activeLock = true;
+		   	menuLock = true;
+				saveloadCursor = 0;
+				saveone = 0;
+			}
+			if(saveloadCursor == 5 ){
+			   load2();
+				SetMessage("ロード2をロードしました")
+				gPhase = 1;
+				angleLock = true;
+		   	activeLock = true;
+		   	menuLock = true;
+				saveloadCursor = 0;
+				saveone = 0;
+			}
+			if(saveloadCursor == 6 ){
+			   load3();
+				SetMessage("ロード3をロードしました")
+				gPhase = 1;
+				angleLock = true;
+		   	activeLock = true;
+		   	menuLock = true;
+				saveloadCursor = 0;
+				saveone = 0;
+			}
+			
+			if(saveloadCursor == 7 ){
+			   gPhase = 9;
+				saveone = 0;
+				saveloadCursor = 0;
+			
+			}
+			
+		}
+	
+   }
+	
+	
+	
+
+	if(  c == 73 ){
+	  
+	   if( gMoveX / 32 == 1 && gMoveY / 32 == 1 ||gMoveX / 32 == 0 && gMoveY / 32 == 0 ){
+	  
+	      if( menu == false ){
+		      menu = true;
+		   	menuScreen();
+		   	angleLock = true;
+		   	activeLock = true;
+		   	menuLock = true;
+				
+		   }else if( menu == true && menuLock == true ){
+		      menu = false;
+			   choice = true;
+		   }
+		}
+   }
+	
+	if( duringEvent == false ){
+      if( c == 77 ){
+	      saveScreen();
+	   }
+   }
+		
+
+	
+}
+
+
+
+
+
+
+
+
+//キー入力UPイベント
+window.onkeyup = function( ev )
+{
+   gKey[ ev.keyCode ] = 0;
+}
+
+function saveScreen(){
+
+   if( gPhase == 1 || gPhase == 9 ){
+   
+	   if( gPhase == 1 || gPhase == 0 ){
+         gPhase = 9;
+			activeLock = false;
+         menuLock = false;
+	      angleLock = false;
+      }else{
+		   gPhase = 1;
+			activeLock = true;
+         menuLock = true;
+	      angleLock = true;
+			menu = true;
+		}
+		
+		
+   }
+}
+
+
+function systemScreen(){
+if( menu == false && combi == 0 ){
+		
+			   if( itemCursor == 1 && diamond == 1 || diamond_code == 1 ){
+		         choice = false;
+				}
+				if( itemCursor == 2 && cord == 1 ){
+		         choice = false;
+				}
+				if( itemCursor == 3 && umbrella == 1 || umbrella_repaired == 1 ){
+		         choice = false;
+				}
+				if( itemCursor == 4 && fabric == 1 ){
+		         choice = false;
+				}
+				if( itemCursor == 5 &&  cup == 1 || cap_water == 1 || cap_baikingWater == 1){
+		         choice = false;
+				}
+				if( itemCursor == 6 && jack == 1 || jack_beautiful == 1 ){
+		         choice = false;
+				}
+				if( itemCursor == 7 && gun == 1 || gun_on == 1 ){
+		         choice = false;
+				}
+				if( itemCursor == 8 && clock == 1 ){
+		         choice = false;
+				}
+				if( itemCursor == 9 && broom == 1 ){
+		         choice = false;
+				}
+				if( itemCursor == 10 && battery == 1 ){
+		         choice = false;
+				}
+				if( itemCursor == 11 && bakingSoda == 1 ){
+		         choice = false;
+				}
+
+		   }
+			
+					
+		if( combi == 1 ){
+		   for( let i = 0; i < 10; i++ ){
+		      if( itemCursor_combi == i ){
+				
+			      combiDone = i;
+					two++;
+					
+					if( two < 10 ){
+					   ja.push( itemCursor_combi )
+						console.log( itemCursor_combi )
+					}
+					
+					if( two == 2 ){
+					   combi = 0;
+						two = 0;
+						itemCursor_combi = 0;
+						combiDone = 0;
+						}
+						
+				   if( ja[0] == 1 && ja[1] == 2 || ja[0] == 2 && ja[1] == 1 ){
+					if( diamond == 1 && cord == 1 ){
+					   diamond_codeGet = 1;
+				      diamond_code = 1;
+						umbrella_repairedGet = 1;
+						diamond = 0;
+						cord = 0;
+						SetMessage( "ダイヤモンドコードを手に入れた",null )
+					  }
+					}
+					 if( ja[0] == 3 && ja[1] == 4 || ja[0] == 4 && ja[1] == 3 ){
+					 if( umbrella == 1 && fabric == 1){
+					   umbrella_repairedGet = 1;
+				      umbrella_repaired = 1;
+						umbrella = 0;
+						fabric = 0;
+						SetMessage( "修復された傘を手に入れた",null )
+						}
+				   }
+					
+					if( ja.length == 2 ){
+					   ja.splice( 0, ja.length )
+					}
+			   }
+			}
+		}
+			
+		if( choice == false ){
+			
+	      if( second == 1 ){
+		      if(choiceCursor == 0 || choiceCursor == null && choice == false ){
+				   if( menu == false ){
+	   	         result();
+					}
+			      choice = true;
+			      second = null;
+			   }
+		   }else{
+			   second = 1;
+		   }
+		
+		   if( choiceCursor == 1 ){
+			
+		      if( itemCursor == 1 && diamond == 1 || diamond_code == 1 ){
+			      if( diamond == 1 ){
+			         SetMessage( "これを思いっきりぶつければ", "大抵のものは壊れるな" )
+			      }
+			      if( diamond_code == 1 ){
+			         SetMessage( "とても硬そうだ", null )
+					}
+			   }
+				
+			   if(itemCursor == 2 && cord == 1 ){
+			      SetMessage( "途中でちぎれている", "しかし十分な長さはあるようだ" )
+			   }
+				
+			   if(itemCursor == 3 && umbrella == 1 || umbrella_repairedGet == 1 ){
+			      if( umbrella_repairedGet == 1 ){
+			         SetMessage( "これで", "雨に濡れることはなさそう" )
+			      }
+					if( umbrella == 1 ){
+			         SetMessage( "相当破れている", "なにか補強できるものがあれば" )
+			      }
+			   }
+				
+			   if( itemCursor == 4 && fabric == 1 ){
+			      SetMessage( "とてもツルツルしている", null )
+			   }
+				
+			   if(itemCursor == 5 && cup == 1 || cap_water == 1 || cap_baikingWaterGet == 1 ){
+               if( cap_water == 1){
+			         SetMessage( "この水", "濁っている" )
+					}
+					if( cup == 1 ){
+			         SetMessage( "穴が空いていないので", "水を貯めれそうだ" )
+			      } 
+					if( cap_baikingWaterGet == 1 ){
+			         SetMessage( "錆が取れそう" )
+			      }
+			   }
+				
+			   if( itemCursor == 6 && jack == 1 || jack_beautiful == 1 ){
+			      if( jack == 1 ){
+			         SetMessage( "錆びてい使えない", "なにか錆が取れるものはないか")
+			      }
+					if( jack_beautiful == 1 ){
+					   SetMessage( "これを使えば", "ドアに隙間を開けておけそうだ" )
+					}
+			   }
+				
+			   if( itemCursor == 7 && gun == 1 || gun_on == 1 ){
+			      if( gun_on == 1 ){
+			         SetMessage( "2つのアイテムをくっつけられそう", null )
+			      }
+					if( gun == 1 ){
+			         SetMessage( "電池がないようだ", null )
+			      }
+			   }
+				
+			   if( itemCursor == 8 && clock == 1 ){
+			      SetMessage( "中になにかありそうだ", null )
+			   }
+				
+			   if( itemCursor == 9 && broom == 1 ){
+			      SetMessage( "これを使えば", "高いところのものも取れそう" )
+			   }
+				
+			   if( itemCursor == 10 && battery == 1 ){
+			      SetMessage( "まだ使えるようだ", null )
+			   }
+				
+			   if( itemCursor == 11 && bakingSoda == 1 ){
+			      SetMessage( "掃除にも食事にも使える", "万能なものだ" )
+			   }
+				
+		}
+		
+		if( choiceCursor == 2 ){
+	      choice = true;
+		   choiceCursor = 0;
+		   second = 0;
+		}
+		
+   }
+		
+			 
+   if( escape == false ){
+	   
+		if( second == 1 ){
+		
+	      if( escapeCursor == 0 ){
+			
+			   if(umbrella_repaired == 1){
+				duringEvent = true
+		         windowEvent();
+				}else{
+				   gPhase = 7;
+				}
+		   }
+		
+		}else{
+		    second = 1;
+		 }
+		
+		if( escapeCursor == 1 ){
+		   escape = true;
+			activeLock = true;
+         menuLock = true;
+      	angleLock = true;
+			escapeCursor = null;
+		}
+
+
+}
+}
+
+   
+
+
+
+
+function result(){
+
+   let cc = choiceCursor;
+	let ic = itemCursor;
+	
+	let angle_addX = 0;  //プレイヤーの向きに応じて座標を１マスずらす
+	let angle_addY = 0;
+	
+   if( gAngle == 0 ){
+	   angle_addY = 32;
+	}
+	if( gAngle == 1 ){
+	   angle_addX = -32;
+	}
+	if( gAngle == 2 ){
+      angle_addX = 32;
+	}
+	if( gAngle == 3 ){
+	   angle_addY = -32;
+	}
+	
+	let x = Math.floor( gPlayerX + angle_addX ) / 32;  //現在地に方向をプラスして判定板の位置を指定
+	let y = Math.floor( gPlayerY + angle_addY )/ 32;
+	
+   if( ic == 1 && cc == 0 && diamond_code == 1 ){
+	      if( clack == 1 ){
+			   SetMessage( "窓が割れた", null )
+			   diamond_code = 0;
+			   choice = true;
+			}
+		}
+	
+	if( ic == 7 && cc == 0 ){
+	   if( gun_onGet == 1 ){
+		   SetMessage( "くっつけるアイテムを２つ選んでください", null )
+			choice = true;
+			combi = 1;
+	   }else{
+		   SetMessage( "電池が入っていないようだ...", null )
+		}
+	}
+	
+	if( ic == 8 && cc == 0 && clockGet == 1 ){
+		
+		if( batteryGet == 0 ){
+	      SetMessage( "電池を手に入れた", null )
+	      battery = 1;
+	      batteryGet = 1;
+			clock = 0;
+	   }
+	}
+	
+	if( ic == 9 && cc == 0 && broomGet == 1 && x == 5 && y == 3 ){
+	   if(clockGet == 0){
+	      SetMessage( "時計を手に入れた", null )
+	      clock = 1;
+	      clockGet = 1;
+			gMap[ 53 ] = 4;
+	   }
+	}
+	if( ic == 10 && cc == 0 && battery == 1 && gun == 1 ){
+		
+		if( gun_onGet == 0 ){
+	      SetMessage( "起動したグルーガンを手に入れた", null )
+	      gun_on = 1;
+	      gun_onGet = 1;
+			battery = 0;
+			gun = 0;
+	   }
+	}
+	
+	if( ic == 5 && cc == 0 && x == 4 && y == 9 && clack == 1 ){
+	if( cup == 1 ){
+		   SetMessage( "水を手に入れた", null )
+			cap_water = 1;
+			cap_waterGet = 1;
+			cup = 0;
+		}
+		}
+	if( ic == 11 && cc == 0 && cap_water == 1 ){
+	   if( bakingSoda == 1 ){
+		   SetMessage( "重曹入りの水を手に入れた", null )
+			cap_baikingWater = 1;
+			cap_baikingWaterGet = 1;
+			cap_water = 0;
+			bakingSoda = 0;
+		}
+	}
+	
+	if( ic == 5 && cc == 0 && jack == 1 && cap_baikingWater == 1 ){
+	    SetMessage( "錆が取れたジャッキを手に入れた", null )
+			jack_beautiful = 1;
+			jack_beautifulGet = 1;
+			cap_baikingWater = 0;
+			jack = 0;
+	}
+	
+	if( x == 17 && y == 6 ){
+	
+	if( ic == 6 && cc == 0 ){
+	   if( jack_beautiful  == 1 ){
+	      SetMessage( "隙間が空いたけど固くて開けれそうにない", "なにか棒のようなものがあれば..." )
+	      jack_beautiful = 0;
+	      pryOpen = 1;
+	   }
+	}
+	
+	if( pryOpen == 1 ){
+	
+      if( ic == 9 && cc == 0 ){
+	      SetMessage( "扉が開いた", null )
+	      broom = 0;
+	      gPlayerX  = 41 * TILESIZE;
+	      gPlayerY  = 36 * TILESIZE;
+	   }
+	}
+	}
+	
+	if( x == 4 && y == 9 ){
+	   if( diamond == 1 ){
+		   SetMessage("力が足りない","なにか長い紐のようなものと組み合わせれば...")
+		}
+	   if( diamond_code == 1 ){
+	      SetMessage( "窓が割れた",null );
+		   diamond_code = 0;
+	      clack = 1;
+		}
+	}
+	
+	
+	
+}
+
+
+
+function menuScreen(){
+ const g  = gScreen.getContext("2d");      //仮想画面を取得
+   if( menu == false ){
+	   //メニューバック
+	   g.fillStyle = "rgba(230,230,255,1)"
+      g.fillRect( 0,0,350,500)
+		g.strokeStyle = "red";
+		g.lineWidth  = 5;
+		g.strokeRect( 0,0,350,500)
+		
+		//メニュー文字
+		g.fillStyle = "black"
+		g.font = "22px monospace"
+		g.fillText("item",5,30)
+		
+		//メニュー枠
+		g.strokeStyle = "red";
+		g.lineWidth  = 3;
+		
+		for( let i = 1; i < 12; i++ ){
+		   g.strokeRect( 20, 40 * i, 32, 32 );
+		}
+		
+		if( combi == 0 ){
+		
+		if( itemCursor > 11 ){
+		   itemCursor = 11;
+		}
+		
+		if( itemCursor < 1 ){
+		   itemCursor = 1;
+		}
+		
+		g.strokeStyle = "yellow";
+		g.lineWidth  = 5;
+		g.strokeRect( 20, 40 * itemCursor, 32, 32 );
+		}
+		
+		if( combi == 1 ){
+
+		   if( itemCursor_combi > 11 ){
+		      itemCursor_combi = 11;
+		   }
+		
+		   if( itemCursor_combi < 1 ){
+		      itemCursor_combi = 1;
+		   }
+		
+		   g.strokeStyle = "blue";
+		   g.lineWidth  = 3;
+		   g.strokeRect( 20, 40 *  itemCursor_combi, 32, 32 );
+		
+		   for( let i = 1; i <= 11; i++ ){
+		      if( combiDone == i){
+		         g.strokeStyle = "green";
+		         g.lineWidth  = 3;
+		         g.strokeRect( 20,  40 * i, 32, 32 );
+				
+		      }
+		   }
+		
+		}
+		
+		if( choice == false ){
+		
+		   g.fillStyle = "rgba( 0, 0, 0, 0.6 )"
+		   g.fillRect(335,52,200,200)
+			
+			g.font = "35px monospace";
+			g.fillStyle = "rgba( 255, 255, 255, 1 )";
+			
+			
+			if( choiceCursor != -1){
+			g.fillText( "⇒", 360, 120 + choiceCursor * 50 );
+			}
+			g.fillText( "使う", 430, 120 );
+			g.fillText( "詳細", 430, 170 );
+			g.fillText( "戻る", 430, 220 );
+			
+		}
+	
+		let ini = 40; //初期値　アイテム表示座標
+		
+		if( diamond == 1 ){
+		g.drawImage( gImgItem2, 0, 0, 32,32,20,ini,32,32)
+		g.font = "25px monospace"
+		g.fillStyle = "black"
+		g.fillText( "ダイアモンド",80, 65 )
+		}
+		if( cord == 1 ){
+		g.drawImage( gImgItem2, 32, 0, 32,32,20, ini * 2,32,32)
+		g.font = "25px monospace"
+		g.fillStyle = "black"
+		g.fillText( "コード",80, 65 + ini)
+		}
+		if( umbrella == 1 ){
+		g.drawImage( gImgItem2, 64, 0, 32,32,20,ini *3,32,32)
+		g.font = "25px monospace"
+		g.fillStyle = "black"
+		g.fillText( "破れた傘",80,65 + ini * 2)
+		}
+		if( fabric == 1 ){
+		g.drawImage( gImgItem2, 96, 0, 32,32,20,ini * 4,32,32)
+		g.font = "25px monospace"
+		g.fillStyle = "black"
+		g.fillText( "布",80,65+ ini * 3)
+		}
+		if( cup == 1 ){
+		g.drawImage( gImgItem2, 0, 32, 32,32,20,ini * 5 ,32,32)
+		g.font = "25px monospace"
+		g.fillStyle = "black"
+		g.fillText( "コップ",80,65 + ini * 4)
+		}
+		if( jack == 1 ){
+		g.drawImage( gImgItem2, 32, 32, 32,32,20,ini * 6,32,32)
+		g.font = "25px monospace"
+		g.fillStyle = "black"
+		g.fillText( "錆びたジャッキ",80,65 + ini * 5)
+		}
+		if( gun == 1 ){
+		g.drawImage( gImgItem2, 64, 32, 32,32,20,ini *  7,32,32)
+		g.font = "25px monospace"
+		g.fillStyle = "black"
+		g.fillText( "グルーガン",80,65 + ini * 6)
+		}
+		if( clock == 1 ){
+		g.drawImage( gImgItem2, 96, 32, 32,32,20,ini * 8 ,32,32)
+		g.font = "25px monospace"
+		g.fillStyle = "black"
+		g.fillText( "時計",80,65 + ini * 7)
+		}
+		if( broom == 1 ){
+		g.drawImage( gImgItem2, 0, 64, 32,32,20,ini *9 ,32,32)
+		g.font = "25px monospace"
+		g.fillStyle = "black"
+		g.fillText( "ホウキ",80,65 + ini * 8)
+		}
+		if( battery == 1 ){
+		g.drawImage( gImgItem2, 32, 64, 32,32,20,ini * 10,32,32)
+		g.font = "25px monospace"
+		g.fillStyle = "black"
+		g.fillText( "電池",80,65 + ini * 9)
+		}
+		if( bakingSoda == 1 ){
+		g.drawImage( gImgItem2, 96, 96, 32,32,20,ini * 11,32,32)
+		g.font = "25px monospace"
+		g.fillStyle = "black"
+		g.fillText( "重曹",80,65 + ini * 10)
+		}
+		if( cap_baikingWater == 1 ){
+		g.drawImage( gImgItem3, 0, 0, 32,32,20,ini * 5,32,32)
+		g.font = "25px monospace"
+		g.fillStyle = "black"
+		g.fillText( "重曹入の水",80,65 + ini * 4)
+		}
+		
+		
+		if( umbrella_repairedGet == 1 ){
+		if( umbrella_repaired == 1 ){
+		g.drawImage( gImgItem2, 32, 96, 32,32,20,ini * 3,32,32)
+		g.font = "25px monospace"
+		g.fillStyle = "black"
+		g.fillText( "修復された傘",80, 65 + ini * 2  )
+		}
+		}
+		
+		if( diamond_codeGet == 1){
+		if( diamond_code == 1 ){
+		g.drawImage( gImgItem2, 0, 96, 32,32,20,ini,32,32)
+		g.font = "25px monospace"
+		g.fillStyle = "black"
+		g.fillText( "ダイヤコード",80, 70 )
+		}
+		}
+		
+		if( gun_onGet == 1 ){
+		if( gun_on == 1 ){
+		g.drawImage( gImgItem2, 96, 64, 32,32,20,ini * 7,32,32)
+		g.font = "25px monospace"
+		g.fillStyle = "black"
+		g.fillText( "起動したグルーガン",80,70 + ini * 6)
+		}
+		}
+		
+		if( cap_waterGet == 1 ){
+		if( cap_water == 1 ){
+		g.drawImage( gImgItem2, 64, 64, 32,32,20,ini * 5,32,32)
+		g.font = "25px monospace"
+		g.fillStyle = "black"
+		g.fillText( "水入コップ",80,70 + ini * 4)
+		}
+		}
+		
+		if( jack_beautifulGet == 1 ){
+		if( jack_beautiful == 1 ){
+		g.drawImage( gImgItem2, 64, 96, 32,32,20,ini * 6,32,32)
+		g.font = "25px monospace"
+		g.fillStyle = "black"
+		g.fillText( "サビの取れたジャッキ",80,70 + ini * 5)
+		}
+		}
+		
+		
+		
+		
+	}
+		
+		if(  escape == false && menu == true ){
+	      g.fillStyle = "rgba(0,0,0,0.6)"
+		   g.fillRect(335,52,280,170)
+			
+			g.font = "35px monospace";
+			g.fillStyle = "rgba(255,255,255,1)";
+			
+			if(escapeCursor > 1){
+			   escapeCursor = 1;
+			}
+			if(escapeCursor < 1){
+			   escapeCursor = 0;
+			}
+			
+			if( escapeCursor != -1){
+			g.fillText("⇒",360,120 + escapeCursor * 50);
+			}
+			g.fillText("外に出る",430,120);
+			g.fillText("外に出ない",430,170);
+
+			}
+			
+}
+
+
+
+function judg(){
+
+    const g  = gScreen.getContext("2d");      //仮想画面を取得
+
+   let angle_addX = 0;  //プレイヤーの向きに応じて座標を１マスずらす
+	let angle_addY = 0;
+	
+   if( gAngle == 0 ){
+	   angle_addY = 32;
+	}
+	if( gAngle == 1 ){
+	   angle_addX = -32;
+	}
+	if( gAngle == 2 ){
+      angle_addX = 32;
+	}
+	if( gAngle == 3 ){
+	   angle_addY = -32;
+	}
+	
+	let x = Math.floor( gPlayerX + angle_addX ) / 32;  //現在地に方向をプラスして判定板の位置を指定
+	let y = Math.floor( gPlayerY + angle_addY )/ 32;
+
+	if( x == 16 && y == 8 ){
+	   if(diamondGet == 0){
+	      SetMessage( "ダイアモンドを手に入れた",null)
+	      diamond = 1;
+	      diamondGet = 1;
+	   }
+   }
+	
+	if( x == 15 && y == 4 ){
+	   if(cordGet == 0){
+	      SetMessage( "コードを手に入れた",null)
+	      cord = 1;
+	      cordGet = 1;
+	   }
+   }
+
+	if( x == 41 && y == 39 ){
+	   if(umbrellaGet == 0){
+	      SetMessage( "破れた傘を手に入れた",null)
+	      umbrella = 1;
+	      umbrellaGet = 1;
+	   }
+   }
+	
+	if( x == 8 && y == 16 ){
+	   if(fabricGet == 0){
+	      SetMessage( "布を手に入れた",null)
+	      fabric = 1;
+	      fabricGet = 1;
+	   }
+	}
+	
+	if( x == 14 && y == 4 ){
+	   if(cupGet == 0){
+	      SetMessage( "コップを手に入れた",null)
+	      cup = 1;
+	      cupGet = 1;
+	   }
+	}
+	
+	if( x == 14 && y == 19 ){
+	   if(jackGet == 0){
+	      SetMessage( "ジャッキを手に入れた",null)
+	      jack = 1;
+	      jackGet = 1;
+	   }
+	}
+	
+	if( x == 8 && y == 19 ){
+	   if(gunGet == 0){
+	      SetMessage( "グルーガンを手に入れた",null)
+	      gun = 1;
+	      gunGet = 1;
+	   }
+	}
+	
+	if( x == 6 && y == 19 ){
+	   if(bakingSodaGet == 0){
+	      SetMessage( "重曹を手に入れた",null)
+	      bakingSoda = 1
+	      bakingSodaGet = 1
+	    }
+	}
+	
+	if( x == 5 && y == 3 ){
+	   if( menu == true ){
+	      SetMessage("高くて届きそうにない","何が長いものがあれば...")
+	   }
+	}
+	
+	if( x == 15 && y == 19 ){
+	   if(broomGet == 0){
+	      SetMessage( "ホウキを手に入れた",null)
+      	broom = 1;
+	      broomGet = 1;
+	   }
+   }
+	
+	
+	if( x == 4 && y == 9 ){
+	
+	   if( clack == 1 && menu == true && escape == true ){ 
+		      SetMessage("外に出ますか？",null)
+		      escape = false;
+		}
+	   
+	   if( clack == 0 ){
+		
+	      if( menu == true ){
+	         SetMessage("ヒビが入っている","硬いものをぶつければ割れそう")
+		   }
+		}
+   }
+	
+	if( x == 40 && y == 36 ){
+	   gPlayerX  = ( 16 * TILESIZE);
+	   gPlayerY  =  ( 6 * TILESIZE);
+	}
+	
+	if( x == 17 && y == 6 && menu == true && menuLock == true ){
+	   if( pryOpen == 0 ){
+	      SetMessage("少し隙間が開いてる","無理やりこじ開けるものがあれば...")
+	   }
+	if(pryOpen == 1){
+	   gPlayerX  = 41 * TILESIZE;
+	   gPlayerY  = 36 * TILESIZE;
+	}
+	}
+	
+	for( let i = 4; i < 20; i++ ){
+	   if( i != 9 ){
+	      if( x == 4 && y == i ){
+	      SetMessage("雨が降っている",null)
+	      }
+		}
+	}
+	
+}
+
+function bgm(){
+let s = 2;
+let e = 32;
+ const audio = new Audio('BGM.wav');
+  audio.play();
+
+  audio.addEventListener('timeupdate', function() {
+    if (this.currentTime >= e) {
+      this.pause();
+      this.currentTime = s;
+      this.play();
+    }
+  });
+}
+
+
+sakoX = 20 * TILESIZE;
+sakoY = 15 * TILESIZE;
+
+let dc = 0;
+let doorEventTimer = null; 
+
+function doorEvent( ) {
+  doorEventTimer = setInterval(function() {
+
+    dc++;
+	 
+    if ( dc == 1) {
+       sako = 1;
+    }
+	 if( dc == 2 ){
+	   sakoMoveY -= 96;
+	 }
+	 
+    if ( dc == 5) {
+	    sakoT = 1
+       SetMessage("あれ？","なんで外にいるの...")
+    }
+	 
+	 if ( dc == 8) {
+	    sakoT = 1
+       SetMessage("もしかして...","記憶思い出しちゃった!?")
+    }
+	 
+	 if ( dc == 11) {
+	    sakoT = 1
+       SetMessage("思い出してない...って？","思い出してないなら良かった")
+    }
+	 
+	 if ( dc == 14) {
+	    sakoT = 1
+       SetMessage("あんな記憶思い出さないほうがいい","さあ、教室に戻ろう")
+    }
+	 
+	 if(dc == 17){
+	    gPhase = 5
+		 duringEvent = false
+	 }
+	 
+	 if(dc == 21){
+	 location.reload();
+	 }
+	 
+	 if(dc == 23){
+	    clearInterval(doorEventTimer);
+	 }
+    
+  }, 1000);
+}
+
+
+
+let wc = 0
+let windowEventTimer = null; 		
+
+
+  
+  
+  function windowEvent(){
+  windowEventTimer = setInterval(function() {
+
+    wc++;
+	  escape = true;
+	 if( wc == 1 ){
+	    backKam = 1;
+	 }
+	 
+    if ( wc == 3) {
+	    SetMessage("その後しばらく歩き","景色を見て俺はすべてを思い出した")
+    }
+	 
+	 if ( wc == 7) {
+	    SetMessage("だからあんなきれいな","教室にいたのか...")
+    }
+	 
+	 if( wc == 11 ){
+	    backKam = 0;
+	    kam = 1;
+		 SetMessage("この核戦争によって滅んだ世界で")
+	 }
+	 
+	 if(wc == 15){
+	    gPhase = 6;
+	 }
+	 
+	  if(wc == 19){
+	    location.reload();
+	 }
+	 
+	 if(wc == 21){
+	    duringEvent = false;
+		 clearInterval(windowEventTimer);
+	 }
+    
+    
+  }, 1000);
+  
+     
+	  
+     
+	
+  }
+
+let oneEvent = false;
+
+function Event(g){
+
+   let px = Math.floor( gPlayerX ) / 32; 
+   let py = Math.floor( gPlayerY ) / 32;
+
+  if( px == 41 && py == 47 || px == 42 && py == 47 || px == 43 && py == 47 ||  px == 44 && py == 47　){
+	   moveStop = 1;
+		if( oneEvent == false){
+		   doorEvent();
+			oneEvent = true;
+			duringEvent = true
+			
+		}
+	}
+
+}
+
+//タイマーイベント発生時の処理
+function FrameTimer()
+{
+   gFrame++;
+	TickField();  //フィールド進行処理
+	WmPaint();
+	Event();
+	
+	if( moveStop == 1 || menu == false || escape == false ){
+	activeLock = false;
+   menuLock = false;
+	angleLock = false;
+	}	
+
+}
+
+//ブラウザ起動イベント
+window.onload = function()
+{
+   LoadImage();
+	
+	gScreen = document.createElement("canvas");                   //仮想画面を作る
+	gScreen.width = WIDTH;                                        //仮想画面の幅を設定
+   gScreen.height = HEIGHT;                                      //仮想画面の高さを設定
+	
+	WmSize();
+	window.addEventListener( "resize", function(){ WmSize() } );  //ブラウザサイズ変更時Wmsize呼び出し
+   setInterval( function(){ FrameTimer() }, INTERVAL );  //一定期間ごとにWmTimerを呼び出す
+}	
+
+function save1() {
+  localStorage.setItem("gPlayerX1", gPlayerX);
+  localStorage.setItem("gPlayerY1", gPlayerY);
+  localStorage.setItem("gAngle1", gAngle);
+
+  localStorage.setItem("diamond1", diamond);
+  localStorage.setItem("cord1", cord);
+  localStorage.setItem("umbrella1", umbrella);
+  localStorage.setItem("fabric1", fabric);
+  localStorage.setItem("jack1", jack);
+  localStorage.setItem("cup1", cup);
+  localStorage.setItem("gun1", gun);
+  localStorage.setItem("clock1", clock);
+  localStorage.setItem("battery1", battery);
+  localStorage.setItem("broom1", broom);
+  localStorage.setItem("bakingSoda1", bakingSoda);
+  localStorage.setItem("umbrella_repaired1", umbrella_repaired);
+  localStorage.setItem("diamond_code1", diamond_code);
+  localStorage.setItem("gun_on1", gun_on);
+  localStorage.setItem("cap_water1", cap_water);
+  localStorage.setItem("jack_beautiful1", jack_beautiful);
+  localStorage.setItem("cap_baikingWater1", cap_baikingWater);
+
+  localStorage.setItem("diamondGet1", diamondGet);
+  localStorage.setItem("cordGet1", cordGet);
+  localStorage.setItem("umbrellaGet1", umbrellaGet);
+  localStorage.setItem("fabricGet1", fabricGet);
+  localStorage.setItem("jackGet1", jackGet);
+  localStorage.setItem("cupGet1", cupGet);
+  localStorage.setItem("gunGet1", gunGet);
+  localStorage.setItem("clockGet1", clockGet);
+  localStorage.setItem("batteryGet1", batteryGet);
+  localStorage.setItem("broomGet1", broomGet);
+  localStorage.setItem("bakingSodaGet1", bakingSodaGet);
+  localStorage.setItem("umbrella_repairedGet1", umbrella_repairedGet);
+  localStorage.setItem("diamond_codeGet1", diamond_codeGet);
+  localStorage.setItem("gun_onGet1", gun_onGet);
+  localStorage.setItem("cap_waterGet1", cap_waterGet);
+  localStorage.setItem("jack_beautifulGet1", jack_beautifulGet);
+  localStorage.setItem("cap_baikingWaterGet1", cap_baikingWaterGet);
+
+  localStorage.setItem("pryOpen1", pryOpen);
+  localStorage.setItem("clack1", clack);
+  console.log("saba")
+  }
+  
+function save2() {
+  localStorage.setItem("gPlayerX2", gPlayerX);
+  localStorage.setItem("gPlayerY2", gPlayerY);
+  localStorage.setItem("gAngle2", gAngle);
+
+  localStorage.setItem("diamond2", diamond);
+  localStorage.setItem("cord2", cord);
+  localStorage.setItem("umbrella2", umbrella);
+  localStorage.setItem("fabric2", fabric);
+  localStorage.setItem("jack2", jack);
+  localStorage.setItem("cup2", cup);
+  localStorage.setItem("gun2", gun);
+  localStorage.setItem("clock2", clock);
+  localStorage.setItem("battery2", battery);
+  localStorage.setItem("broom2", broom);
+  localStorage.setItem("bakingSoda2", bakingSoda);
+  localStorage.setItem("umbrella_repaired2", umbrella_repaired);
+  localStorage.setItem("diamond_code2", diamond_code);
+  localStorage.setItem("gun_on2", gun_on);
+  localStorage.setItem("cap_water2", cap_water);
+  localStorage.setItem("jack_beautiful2", jack_beautiful);
+  localStorage.setItem("cap_baikingWater2", cap_baikingWater);
+
+  localStorage.setItem("diamondGet2", diamondGet);
+  localStorage.setItem("cordGet2", cordGet);
+  localStorage.setItem("umbrellaGet2", umbrellaGet);
+  localStorage.setItem("fabricGet2", fabricGet);
+  localStorage.setItem("jackGet2", jackGet);
+  localStorage.setItem("cupGet2", cupGet);
+  localStorage.setItem("gunGet2", gunGet);
+  localStorage.setItem("clockGet2", clockGet);
+  localStorage.setItem("batteryGet2", batteryGet);
+  localStorage.setItem("broomGet2", broomGet);
+  localStorage.setItem("bakingSodaGet2", bakingSodaGet);
+  localStorage.setItem("umbrella_repairedGet2", umbrella_repairedGet);
+  localStorage.setItem("diamond_codeGet2", diamond_codeGet);
+  localStorage.setItem("gun_onGet2", gun_onGet);
+  localStorage.setItem("cap_waterGet2", cap_waterGet);
+  localStorage.setItem("jack_beautifulGet2", jack_beautifulGet);
+  localStorage.setItem("cap_baikingWaterGet2", cap_baikingWaterGet);
+
+  localStorage.setItem("pryOpen2", pryOpen);
+  localStorage.setItem("clack2", clack);
+  
+  }
+  
+  function save3() {
+  localStorage.setItem("gPlayerX3", gPlayerX);
+  localStorage.setItem("gPlayerY3", gPlayerY);
+  localStorage.setItem("gAngle3", gAngle);
+
+  localStorage.setItem("diamond3", diamond);
+  localStorage.setItem("cord3", cord);
+  localStorage.setItem("umbrella3", umbrella);
+  localStorage.setItem("fabric3", fabric);
+  localStorage.setItem("jack3", jack);
+  localStorage.setItem("cup3", cup);
+  localStorage.setItem("gun3", gun);
+  localStorage.setItem("clock3", clock);
+  localStorage.setItem("battery3", battery);
+  localStorage.setItem("broom3", broom);
+  localStorage.setItem("bakingSoda3", bakingSoda);
+  localStorage.setItem("umbrella_repaired3", umbrella_repaired);
+  localStorage.setItem("diamond_code3", diamond_code);
+  localStorage.setItem("gun_on3", gun_on);
+  localStorage.setItem("cap_water3", cap_water);
+  localStorage.setItem("jack_beautiful3", jack_beautiful);
+  localStorage.setItem("cap_baikingWater3", cap_baikingWater);
+
+  localStorage.setItem("diamondGet3", diamondGet);
+  localStorage.setItem("cordGet3", cordGet);
+  localStorage.setItem("umbrellaGet3", umbrellaGet);
+  localStorage.setItem("fabricGet3", fabricGet);
+  localStorage.setItem("jackGet3", jackGet);
+  localStorage.setItem("cupGet3", cupGet);
+  localStorage.setItem("gunGet3", gunGet);
+  localStorage.setItem("clockGet3", clockGet);
+  localStorage.setItem("batteryGet3", batteryGet);
+  localStorage.setItem("broomGet3", broomGet);
+  localStorage.setItem("bakingSodaGet3", bakingSodaGet);
+  localStorage.setItem("umbrella_repairedGet3", umbrella_repairedGet);
+  localStorage.setItem("diamond_codeGet3", diamond_codeGet);
+  localStorage.setItem("gun_onGet3", gun_onGet);
+  localStorage.setItem("cap_waterGet3", cap_waterGet);
+  localStorage.setItem("jack_beautifulGet3", jack_beautifulGet);
+  localStorage.setItem("cap_baikingWaterGet3", cap_baikingWaterGet);
+
+  localStorage.setItem("pryOpen3", pryOpen);
+  localStorage.setItem("clack3", clack);
+}
+
+
+function load1(){
+const savegPlayerX1 = localStorage.getItem("gPlayerX1", gPlayerX);
+const savegPlayerY1 = localStorage.getItem("gPlayerY1", gPlayerY);
+const savegAngle1 = localStorage.getItem("gAngle1", gAngle);
+
+const savediamond1 = localStorage.getItem("diamond1", diamond);
+const savecord1 = localStorage.getItem("cord1", cord);
+const saveumbrella1 = localStorage.getItem("umbrella1", umbrella);
+const savefabric1 = localStorage.getItem("fabric1", fabric);
+const savejack1 = localStorage.getItem("jack1", jack);
+const savecup1 = localStorage.getItem("cup1", cup);
+const savegun1 = localStorage.getItem("gun1", gun);
+const saveclock1 = localStorage.getItem("clock1", clock);
+const savebattery1 = localStorage.getItem("battery1", battery);
+const savebroom1 = localStorage.getItem("broom1", broom);
+const savebakingSoda1 = localStorage.getItem("bakingSoda1", bakingSoda);
+const saveumbrella_repaired1 = localStorage.getItem("umbrella_repaired1", umbrella_repaired);
+const savediamond_code1 = localStorage.getItem("diamond_code1", diamond_code);
+const savegun_on1 = localStorage.getItem("gun_on1", gun_on);
+const savecap_water1 = localStorage.getItem("cap_water1", cap_water);
+const savejack_beautiful1 = localStorage.getItem("jack_beautiful1", jack_beautiful);
+const savecap_baikingWater1 = localStorage.getItem("cap_baikingWater1", cap_baikingWater);
+
+const savediamondGet1 = localStorage.getItem("diamondGet1", diamondGet);
+const savecordGet1 = localStorage.getItem("cordGet1", cordGet);
+const saveumbrellaGet1 = localStorage.getItem("umbrellaGet1", umbrellaGet);
+const savefabricGet1 = localStorage.getItem("fabricGet1", fabricGet);
+const savejackGet1 = localStorage.getItem("jackGet1", jackGet);
+const savecupGet1 = localStorage.getItem("cupGet1", cupGet);
+const savegunGet1 = localStorage.getItem("gunGet1", gunGet);
+const saveclockGet1 = localStorage.getItem("clockGet1", clockGet);
+const savebatteryGet1 = localStorage.getItem("batteryGet1", batteryGet);
+const savebroomGet1 = localStorage.getItem("broomGet1", broomGet);
+const savebakingSodaGet1 = localStorage.getItem("bakingSodaGet1", bakingSodaGet);
+const saveumbrella_repairedGet1 = localStorage.getItem("umbrella_repairedGet1", umbrella_repairedGet);
+const savediamond_codeGet1 = localStorage.getItem("diamond_codeGet1", diamond_codeGet);
+const savegun_onGet1 = localStorage.getItem("gun_onGet1", gun_onGet);
+const savecap_waterGet1 = localStorage.getItem("cap_waterGet1", cap_waterGet);
+const savejack_beautifulGet1 = localStorage.getItem("jack_beautifulGet1", jack_beautifulGet);
+const savecap_baikingWaterGet1 = localStorage.getItem("cap_baikingWaterGet1", cap_baikingWaterGet);
+
+const savepryOpen1 = localStorage.getItem("pryOpen1", pryOpen);
+const saveclack1 = localStorage.getItem("clack1", clack);
+
+if (savegPlayerX1 !== null) {
+  gPlayerX = parseInt(savegPlayerX1);
+}
+if (savegPlayerY1 !== null) {
+  gPlayerY = parseInt(savegPlayerY1);
+}
+if (savegAngle1 !== null) {
+  gAngle = parseInt(savegAngle1);
+}
+if (savediamond1 !== null) {
+  diamond = parseInt(savediamond1);
+}
+if (savecord1 !== null) {
+  cord = parseInt(savecord1);
+}
+if (saveumbrella1 !== null) {
+  umbrella = parseInt(saveumbrella1);
+}
+if (savefabric1 !== null) {
+  fabric = parseInt(savefabric1);
+}
+if (savejack1 !== null) {
+  jack = parseInt(savejack1);
+}
+if (savecup1 !== null) {
+  cup = parseInt(savecup1);
+}
+if (savegun1 !== null) {
+  gun = parseInt(savegun1);
+}
+if (saveclock1 !== null) {
+  clock = parseInt(saveclock1);
+}
+if (savebattery1 !== null) {
+  battery = parseInt(savebattery1);
+}
+if (savebroom1 !== null) {
+  broom = parseInt(savebroom1);
+}
+if (savebakingSoda1 !== null) {
+  bakingSoda = parseInt(savebakingSoda1);
+}
+if (saveumbrella_repaired1 !== null) {
+  umbrella_repaired = parseInt(saveumbrella_repaired1);
+}
+if (savediamond_code1 !== null) {
+  diamond_code = parseInt(savediamond_code1);
+}
+if (savegun_on1 !== null) {
+  gun_on = parseInt(savegun_on1);
+}
+if (savejack_beautiful1 !== null) {
+  jack_beautiful = parseInt(savejack_beautiful1);
+}
+if (savecap_baikingWater1 !== null) {
+  cap_baikingWater = parseInt(savecap_baikingWater1);
+}
+
+if (savediamondGet1 !== null) {
+  diamondGet = parseInt(savediamondGet1);
+}
+if (savecordGet1 !== null) {
+  cordGet = parseInt(savecordGet1);
+}
+if (saveumbrellaGet1 !== null) {
+  umbrellaGet = parseInt(saveumbrellaGet1);
+}
+if (savefabricGet1 !== null) {
+  fabricGet = parseInt(savefabricGet1);
+}
+if (savejackGet1 !== null) {
+  jackGet = parseInt(savejackGet1);
+}
+if (savecupGet1 !== null) {
+  cupGet = parseInt(savecupGet1);
+}
+if (savegunGet1 !== null) {
+  gunGet = parseInt(savegunGet1);
+}
+if (saveclockGet1 !== null) {
+  clockGet = parseInt(saveclockGet1);
+}
+if (savebatteryGet1 !== null) {
+  batteryGet = parseInt(savebatteryGet1);
+}
+if (savebroomGet1 !== null) {
+  broomGet = parseInt(savebroomGet1);
+}
+if (savebakingSodaGet1 !== null) {
+  bakingSodaGet = parseInt(savebakingSodaGet1);
+}
+if (saveumbrella_repairedGet1 !== null) {
+  umbrella_repairedGet = parseInt(saveumbrella_repairedGet1);
+}
+if (savediamond_codeGet1 !== null) {
+  diamond_codeGet = parseInt(savediamond_codeGet1);
+}
+if (savegun_onGet1 !== null) {
+  gun_onGet = parseInt(savegun_onGet1);
+}
+if (savejack_beautifulGet1 !== null) {
+  jack_beautifulGet = parseInt(savejack_beautifulGet1);
+}
+if (savecap_baikingWaterGet1 !== null) {
+  cap_baikingWaterGet = parseInt(savecap_baikingWaterGet1);
+}
+
+if (savepryOpen1 !== null) {
+  pryOpen = parseInt(savepryOpen1);
+}
+if (saveclack1 !== null) {
+  clack = parseInt(saveclack1);
+}
+
+console.log("load")
+
+}
+
+function load2(){
+const savegPlayerX2 = localStorage.getItem("gPlayerX2", gPlayerX);
+const savegPlayerY2 = localStorage.getItem("gPlayerY2", gPlayerY);
+const savegAngle2 = localStorage.getItem("gAngle2", gAngle);
+
+const savediamond2 = localStorage.getItem("diamond2", diamond);
+const savecord2 = localStorage.getItem("cord2", cord);
+const saveumbrella2 = localStorage.getItem("umbrella2", umbrella);
+const savefabric2 = localStorage.getItem("fabric2", fabric);
+const savejack2 = localStorage.getItem("jack2", jack);
+const savecup2 = localStorage.getItem("cup2", cup);
+const savegun2 = localStorage.getItem("gun2", gun);
+const saveclock2 = localStorage.getItem("clock2", clock);
+const savebattery2 = localStorage.getItem("battery2", battery);
+const savebroom2 = localStorage.getItem("broom2", broom);
+const savebakingSoda2 = localStorage.getItem("bakingSoda2", bakingSoda);
+const saveumbrella_repaired2 = localStorage.getItem("umbrella_repaired2", umbrella_repaired);
+const savediamond_code2 = localStorage.getItem("diamond_code2", diamond_code);
+const savegun_on2 = localStorage.getItem("gun_on2", gun_on);
+const savecap_water2 = localStorage.getItem("cap_water2", cap_water);
+const savejack_beautiful2 = localStorage.getItem("jack_beautiful2", jack_beautiful);
+const savecap_baikingWater2 = localStorage.getItem("cap_baikingWater2", cap_baikingWater);
+
+const savediamondGet2 = localStorage.getItem("diamondGet2", diamondGet);
+const savecordGet2 = localStorage.getItem("cordGet2", cordGet);
+const saveumbrellaGet2 = localStorage.getItem("umbrellaGet2", umbrellaGet);
+const savefabricGet2 = localStorage.getItem("fabricGet2", fabricGet);
+const savejackGet2 = localStorage.getItem("jackGet2", jackGet);
+const savecupGet2 = localStorage.getItem("cupGet2", cupGet);
+const savegunGet2 = localStorage.getItem("gunGet2", gunGet);
+const saveclockGet2 = localStorage.getItem("clockGet2", clockGet);
+const savebatteryGet2 = localStorage.getItem("batteryGet2", batteryGet);
+const savebroomGet2 = localStorage.getItem("broomGet2", broomGet);
+const savebakingSodaGet2 = localStorage.getItem("bakingSodaGet2", bakingSodaGet);
+const saveumbrella_repairedGet2 = localStorage.getItem("umbrella_repairedGet2", umbrella_repairedGet);
+const savediamond_codeGet2 = localStorage.getItem("diamond_codeGet2", diamond_codeGet);
+const savegun_onGet2 = localStorage.getItem("gun_onGet2", gun_onGet);
+const savecap_waterGet2 = localStorage.getItem("cap_waterGet2", cap_waterGet);
+const savejack_beautifulGet2 = localStorage.getItem("jack_beautifulGet2", jack_beautifulGet);
+const savecap_baikingWaterGet2 = localStorage.getItem("cap_baikingWaterGet2", cap_baikingWaterGet);
+
+const savepryOpen2 = localStorage.getItem("pryOpen2", pryOpen);
+const saveclack2 = localStorage.getItem("clack2", clack);
+
+if (savegPlayerX2 !== null) {
+  gPlayerX = parseInt(savegPlayerX2);
+}
+if (savegPlayerY2 !== null) {
+  gPlayerY = parseInt(savegPlayerY2);
+}
+if (savegAngle2 !== null) {
+  gAngle = parseInt(savegAngle2);
+}
+if (savediamond2 !== null) {
+  diamond = parseInt(savediamond2);
+}
+if (savecord2 !== null) {
+  cord = parseInt(savecord2);
+}
+if (saveumbrella2 !== null) {
+  umbrella = parseInt(saveumbrella2);
+}
+if (savefabric2 !== null) {
+  fabric = parseInt(savefabric2);
+}
+if (savejack2 !== null) {
+  jack = parseInt(savejack2);
+}
+if (savecup2 !== null) {
+  cup = parseInt(savecup2);
+}
+if (savegun2 !== null) {
+  gun = parseInt(savegun2);
+}
+if (saveclock2 !== null) {
+  clock = parseInt(saveclock2);
+}
+if (savebattery2 !== null) {
+  battery = parseInt(savebattery2);
+}
+if (savebroom2 !== null) {
+  broom = parseInt(savebroom2);
+}
+if (savebakingSoda2 !== null) {
+  bakingSoda = parseInt(savebakingSoda2);
+}
+if (saveumbrella_repaired2 !== null) {
+  umbrella_repaired = parseInt(saveumbrella_repaired2);
+}
+if (savediamond_code2 !== null) {
+  diamond_code = parseInt(savediamond_code2);
+}
+if (savegun_on2 !== null) {
+  gun_on = parseInt(savegun_on2);
+}
+if (savejack_beautiful2 !== null) {
+  jack_beautiful = parseInt(savejack_beautiful2);
+}
+if (savecap_baikingWater2 !== null) {
+  cap_baikingWater = parseInt(savecap_baikingWater2);
+}
+
+if (savediamondGet2 !== null) {
+  diamondGet = parseInt(savediamondGet2);
+}
+if (savecordGet2 !== null) {
+  cordGet = parseInt(savecordGet2);
+}
+if (saveumbrellaGet2 !== null) {
+  umbrellaGet = parseInt(saveumbrellaGet2);
+}
+if (savefabricGet2 !== null) {
+  fabricGet = parseInt(savefabricGet2);
+}
+if (savejackGet2 !== null) {
+  jackGet = parseInt(savejackGet2);
+}
+if (savecupGet2 !== null) {
+  cupGet = parseInt(savecupGet2);
+}
+if (savegunGet2 !== null) {
+  gunGet = parseInt(savegunGet2);
+}
+if (saveclockGet2 !== null) {
+  clockGet = parseInt(saveclockGet2);
+}
+if (savebatteryGet2 !== null) {
+  batteryGet = parseInt(savebatteryGet2);
+}
+if (savebroomGet2 !== null) {
+  broomGet = parseInt(savebroomGet2);
+}
+if (savebakingSodaGet2 !== null) {
+  bakingSodaGet = parseInt(savebakingSodaGet2);
+}
+if (saveumbrella_repairedGet2 !== null) {
+  umbrella_repairedGet = parseInt(saveumbrella_repairedGet2);
+}
+if (savediamond_codeGet2 !== null) {
+  diamond_codeGet = parseInt(savediamond_codeGet2);
+}
+if (savegun_onGet2 !== null) {
+  gun_onGet = parseInt(savegun_onGet2);
+}
+if (savejack_beautifulGet2 !== null) {
+  jack_beautifulGet = parseInt(savejack_beautifulGet2);
+}
+if (savecap_baikingWaterGet2 !== null) {
+  cap_baikingWaterGet = parseInt(savecap_baikingWaterGet2);
+}
+
+if (savepryOpen2 !== null) {
+  pryOpen = parseInt(savepryOpen2);
+}
+if (saveclack2 !== null) {
+  clack = parseInt(saveclack2);
+}
+  
+}
+
+function load3(){
+const savegPlayerX3 = localStorage.getItem("gPlayerX3", gPlayerX);
+const savegPlayerY3 = localStorage.getItem("gPlayerY3", gPlayerY);
+const savegAngle3 = localStorage.getItem("gAngle3", gAngle);
+
+const savediamond3 = localStorage.getItem("diamond3", diamond);
+const savecord3 = localStorage.getItem("cord3", cord);
+const saveumbrella3 = localStorage.getItem("umbrella3", umbrella);
+const savefabric3 = localStorage.getItem("fabric3", fabric);
+const savejack3 = localStorage.getItem("jack3", jack);
+const savecup3 = localStorage.getItem("cup3", cup);
+const savegun3 = localStorage.getItem("gun3", gun);
+const saveclock3 = localStorage.getItem("clock3", clock);
+const savebattery3 = localStorage.getItem("battery3", battery);
+const savebroom3 = localStorage.getItem("broom3", broom);
+const savebakingSoda3 = localStorage.getItem("bakingSoda3", bakingSoda);
+const saveumbrella_repaired3 = localStorage.getItem("umbrella_repaired3", umbrella_repaired);
+const savediamond_code3 = localStorage.getItem("diamond_code3", diamond_code);
+const savegun_on3 = localStorage.getItem("gun_on3", gun_on);
+const savecap_water3 = localStorage.getItem("cap_water3", cap_water);
+const savejack_beautiful3 = localStorage.getItem("jack_beautiful3", jack_beautiful);
+const savecap_baikingWater3 = localStorage.getItem("cap_baikingWater3", cap_baikingWater);
+
+const savediamondGet3 = localStorage.getItem("diamondGet3", diamondGet);
+const savecordGet3 = localStorage.getItem("cordGet3", cordGet);
+const saveumbrellaGet3 = localStorage.getItem("umbrellaGet3", umbrellaGet);
+const savefabricGet3 = localStorage.getItem("fabricGet3", fabricGet);
+const savejackGet3 = localStorage.getItem("jackGet3", jackGet);
+const savecupGet3 = localStorage.getItem("cupGet3", cupGet);
+const savegunGet3 = localStorage.getItem("gunGet3", gunGet);
+const saveclockGet3 = localStorage.getItem("clockGet3", clockGet);
+const savebatteryGet3 = localStorage.getItem("batteryGet3", batteryGet);
+const savebroomGet3 = localStorage.getItem("broomGet3", broomGet);
+const savebakingSodaGet3 = localStorage.getItem("bakingSodaGet3", bakingSodaGet);
+const saveumbrella_repairedGet3 = localStorage.getItem("umbrella_repairedGet3", umbrella_repairedGet);
+const savediamond_codeGet3 = localStorage.getItem("diamond_codeGet3", diamond_codeGet);
+const savegun_onGet3 = localStorage.getItem("gun_onGet3", gun_onGet);
+const savecap_waterGet3 = localStorage.getItem("cap_waterGet3", cap_waterGet);
+const savejack_beautifulGet3 = localStorage.getItem("jack_beautifulGet3", jack_beautifulGet);
+const savecap_baikingWaterGet3 = localStorage.getItem("cap_baikingWaterGet3", cap_baikingWaterGet);
+
+const savepryOpen3 = localStorage.getItem("pryOpen3", pryOpen);
+const saveclack3 = localStorage.getItem("clack3", clack);
+
+if (savegPlayerX3 !== null) {
+  gPlayerX = parseInt(savegPlayerX3);
+}
+if (savegPlayerY3 !== null) {
+  gPlayerY = parseInt(savegPlayerY3);
+}
+if (savegAngle3 !== null) {
+  gAngle = parseInt(savegAngle3);
+}
+if (savediamond3 !== null) {
+  diamond = parseInt(savediamond3);
+}
+if (savecord3 !== null) {
+  cord = parseInt(savecord3);
+}
+if (saveumbrella3 !== null) {
+  umbrella = parseInt(saveumbrella3);
+}
+if (savefabric3 !== null) {
+  fabric = parseInt(savefabric3);
+}
+if (savejack3 !== null) {
+  jack = parseInt(savejack3);
+}
+if (savecup3 !== null) {
+  cup = parseInt(savecup3);
+}
+if (savegun3 !== null) {
+  gun = parseInt(savegun3);
+}
+if (saveclock3 !== null) {
+  clock = parseInt(saveclock3);
+}
+if (savebattery3 !== null) {
+  battery = parseInt(savebattery3);
+}
+if (savebroom3 !== null) {
+  broom = parseInt(savebroom3);
+}
+if (savebakingSoda3 !== null) {
+  bakingSoda = parseInt(savebakingSoda3);
+}
+if (saveumbrella_repaired3 !== null) {
+  umbrella_repaired = parseInt(saveumbrella_repaired3);
+}
+if (savediamond_code3 !== null) {
+  diamond_code = parseInt(savediamond_code3);
+}
+if (savegun_on3 !== null) {
+  gun_on = parseInt(savegun_on3);
+}
+if (savejack_beautiful3 !== null) {
+  jack_beautiful = parseInt(savejack_beautiful3);
+}
+if (savecap_baikingWater3 !== null) {
+  cap_baikingWater = parseInt(savecap_baikingWater3);
+}
+
+if (savediamondGet3 !== null) {
+  diamondGet = parseInt(savediamondGet3);
+}
+if (savecordGet3 !== null) {
+  cordGet = parseInt(savecordGet3);
+}
+if (saveumbrellaGet3 !== null) {
+  umbrellaGet = parseInt(saveumbrellaGet3);
+}
+if (savefabricGet3 !== null) {
+  fabricGet = parseInt(savefabricGet3);
+}
+if (savejackGet3 !== null) {
+  jackGet = parseInt(savejackGet3);
+}
+if (savecupGet3 !== null) {
+  cupGet = parseInt(savecupGet3);
+}
+if (savegunGet3 !== null) {
+  gunGet = parseInt(savegunGet3);
+}
+if (saveclockGet3 !== null) {
+  clockGet = parseInt(saveclockGet3);
+}
+if (savebatteryGet3 !== null) {
+  batteryGet = parseInt(savebatteryGet3);
+}
+if (savebroomGet3 !== null) {
+  broomGet = parseInt(savebroomGet3);
+}
+if (savebakingSodaGet3 !== null) {
+  bakingSodaGet = parseInt(savebakingSodaGet3);
+}
+if (saveumbrella_repairedGet3 !== null) {
+  umbrella_repairedGet = parseInt(saveumbrella_repairedGet3);
+}
+if (savediamond_codeGet3 !== null) {
+  diamond_codeGet = parseInt(savediamond_codeGet3);
+}
+if (savegun_onGet3 !== null) {
+  gun_onGet = parseInt(savegun_onGet3);
+}
+if (savecap_waterGet3 !== null) {
+  cap_waterGet = parseInt(savecap_waterGet3);
+}
+if (savejack_beautifulGet3 !== null) {
+  jack_beautifulGet = parseInt(savejack_beautifulGet3);
+}
+if (savecap_baikingWaterGet3 !== null) {
+  cap_baikingWaterGet = parseInt(savecap_baikingWaterGet3);
+}
+
+if (savepryOpen3 !== null) {
+  pryOpen = parseInt(savepryOpen3);
+}
+if (saveclack3 !== null) {
+  clack = parseInt(saveclack3);
+}
+
+}
+
+function reset(){
+  
+  gPlayerX = 13 * TILESIZE;
+  gPlayerY = 8 * TILESIZE;
+  gAngle = 3;
+  
+  diamond  = 0;
+  cord     = 0;
+  umbrella = 0;
+  fabric   = 0;
+  jack     = 0;
+  cup      = 0;
+  gun      = 0;
+  clock    = 0;
+  battery  = 0;
+  broom    = 0;
+  bakingSoda = 0;
+
+  umbrella_repaired = 0;
+  diamond_code = 0;
+  gun_on = 0;
+  cap_water = 0;
+  jack_beautiful = 0;
+  cap_baikingWater = 0;
+
+  diamondGet  = 0;
+  cordGet     = 0;
+  umbrellaGet = 0;
+  fabricGet   = 0;
+  jackGet     = 0;
+  cupGet      = 0;
+  gunGet      = 0;
+  clockGet    = 0;
+  batteryGet  = 0;
+  broomGet    = 0;
+  bakingSodaGet  = 0 ;
+
+  umbrella_repairedGet = 0;
+  diamond_codeGet = 0;
+  gun_onGet = 0;
+  cap_waterGet = 0;
+  jack_beautifulGet = 0;
+  cap_baikingWaterGet = 0;
+  
+  pryOpen = 0;
+  clack = 0;
+
+localStorage.removeItem("gPlayerX1");
+localStorage.removeItem("gPlayerY1");
+localStorage.removeItem("gAngle1");
+
+localStorage.removeItem("diamond1");
+localStorage.removeItem("cord1");
+localStorage.removeItem("umbrella1");
+localStorage.removeItem("fabric1");
+localStorage.removeItem("jack1");
+localStorage.removeItem("cup1");
+localStorage.removeItem("gun1");
+localStorage.removeItem("clock1");
+localStorage.removeItem("battery1");
+localStorage.removeItem("broom1");
+localStorage.removeItem("bakingSoda1");
+localStorage.removeItem("umbrella_repaired1");
+localStorage.removeItem("diamond_code1");
+localStorage.removeItem("gun_on1");
+localStorage.removeItem("cap_water1");
+localStorage.removeItem("jack_beautiful1");
+localStorage.removeItem("cap_baikingWater1");
+
+localStorage.removeItem("diamondGet1");
+localStorage.removeItem("cordGet1");
+localStorage.removeItem("umbrellaGet1");
+localStorage.removeItem("fabricGet1");
+localStorage.removeItem("jackGet1");
+localStorage.removeItem("cupGet1");
+localStorage.removeItem("gunGet1");
+localStorage.removeItem("clockGet1");
+localStorage.removeItem("batteryGet1");
+localStorage.removeItem("broomGet1");
+localStorage.removeItem("bakingSodaGet1");
+localStorage.removeItem("umbrella_repairedGet1");
+localStorage.removeItem("diamond_codeGet1");
+localStorage.removeItem("gun_onGet1");
+localStorage.removeItem("cap_waterGet1");
+localStorage.removeItem("jack_beautifulGet1");
+localStorage.removeItem("cap_baikingWaterGet1");
+localStorage.removeItem("pryOpen1");
+localStorage.removeItem("clack1");
+
+localStorage.removeItem("gPlayerX2");
+localStorage.removeItem("gPlayerY2");
+localStorage.removeItem("gAngle2");
+
+localStorage.removeItem("diamond2");
+localStorage.removeItem("cord2");
+localStorage.removeItem("umbrella2");
+localStorage.removeItem("fabric2");
+localStorage.removeItem("jack2");
+localStorage.removeItem("cup2");
+localStorage.removeItem("gun2");
+localStorage.removeItem("clock2");
+localStorage.removeItem("battery2");
+localStorage.removeItem("broom2");
+localStorage.removeItem("bakingSoda2");
+localStorage.removeItem("umbrella_repaired2");
+localStorage.removeItem("diamond_code2");
+localStorage.removeItem("gun_on2");
+localStorage.removeItem("cap_water2");
+localStorage.removeItem("jack_beautiful2");
+localStorage.removeItem("cap_baikingWater2");
+
+localStorage.removeItem("diamondGet2");
+localStorage.removeItem("cordGet2");
+localStorage.removeItem("umbrellaGet2");
+localStorage.removeItem("fabricGet2");
+localStorage.removeItem("jackGet2");
+localStorage.removeItem("cupGet2");
+localStorage.removeItem("gunGet2");
+localStorage.removeItem("clockGet2");
+localStorage.removeItem("batteryGet2");
+localStorage.removeItem("broomGet2");
+localStorage.removeItem("bakingSodaGet2");
+localStorage.removeItem("umbrella_repairedGet2");
+localStorage.removeItem("diamond_codeGet2");
+localStorage.removeItem("gun_onGet2");
+localStorage.removeItem("cap_waterGet2");
+localStorage.removeItem("jack_beautifulGet2");
+localStorage.removeItem("cap_baikingWaterGet2");
+localStorage.removeItem("pryOpen2");
+localStorage.removeItem("clack2");
+
+localStorage.removeItem("gPlayerX3");
+localStorage.removeItem("gPlayerY3");
+localStorage.removeItem("gAngle3");
+
+localStorage.removeItem("diamond3");
+localStorage.removeItem("cord3");
+localStorage.removeItem("umbrella3");
+localStorage.removeItem("fabric3");
+localStorage.removeItem("jack3");
+localStorage.removeItem("cup3");
+localStorage.removeItem("gun3");
+localStorage.removeItem("clock3");
+localStorage.removeItem("battery3");
+localStorage.removeItem("broom3");
+localStorage.removeItem("bakingSoda3");
+localStorage.removeItem("umbrella_repaired3");
+localStorage.removeItem("diamond_code3");
+localStorage.removeItem("gun_on3");
+localStorage.removeItem("cap_water3");
+localStorage.removeItem("jack_beautiful3");
+localStorage.removeItem("cap_baikingWater3");
+
+localStorage.removeItem("diamondGet3");
+localStorage.removeItem("cordGet3");
+localStorage.removeItem("umbrellaGet3");
+localStorage.removeItem("fabricGet3");
+localStorage.removeItem("jackGet3");
+localStorage.removeItem("cupGet3");
+localStorage.removeItem("gunGet3");
+localStorage.removeItem("clockGet3");
+localStorage.removeItem("batteryGet3");
+localStorage.removeItem("broomGet3");
+localStorage.removeItem("bakingSodaGet3");
+localStorage.removeItem("umbrella_repairedGet3");
+localStorage.removeItem("diamond_codeGet3");
+localStorage.removeItem("gun_onGet3");
+localStorage.removeItem("cap_waterGet3");
+localStorage.removeItem("jack_beautifulGet3");
+localStorage.removeItem("cap_baikingWaterGet3");
+localStorage.removeItem("pryOpen3");
+localStorage.removeItem("clack3");
+
+  
+  
+}
+
+</script>
+</body>
+</html>
